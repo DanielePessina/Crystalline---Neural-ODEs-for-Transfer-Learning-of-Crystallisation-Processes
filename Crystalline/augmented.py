@@ -214,11 +214,13 @@ class AugmentedNeuralODE(eqx.Module):
     def __call__(self, ts: Array, y0: Array, *, return_augmented: Bool = False) -> Array:
         """
         Args:
-            ts: Time points of shape (T,)
-            y0: Initial condition in ℝ^d (original space), shape (d,)
+            ts: Time points of shape (T,).
+            y0: Initial condition in ℝ^d (original space), shape (d,).
+            return_augmented: If True, return the full augmented trajectory.
 
         Returns:
-            Trajectory in original space ℝ^d, shape (T, d)
+            Trajectory of shape (T, d) when ``return_augmented`` is False,
+            otherwise the augmented trajectory of shape (T, d + d_aug).
         """
         # Augment initial condition with zeros
         y0_aug = jnp.concatenate([y0, jnp.zeros(self.augment_size, dtype=y0.dtype)], axis=-1)
@@ -341,36 +343,43 @@ def train_AugNODE_fresh(
 ) -> tuple[Array, Array, Array, AugmentedNeuralODE, MinMaxScaler | None, list[dict]]:
     """Train an augmented NODE from scratch using synthetic crystallisation data.
 
-    Parameters
-    ----------
-    training_initialconcentrations, testing_initialconcentrations : list[float]
-        Initial solute concentrations for training and testing experiments.
-    ntimesteps : int, optional
-        Number of discretisation points for the simulated trajectories.
-    nucl_params, growth_params : list[float]
-        Kinetic parameters for the moment model.
-    noise : bool, optional
-        If ``True`` Gaussian noise with magnitude ``noise_level`` is added to
-        the synthetic data before scaling.
-    lr_strategy, steps_strategy, length_strategy : tuple
-        Hyperparameter schedules for the two training phases.
-    batch_size : int | str
-        Batch size for the data loader or ``"all"`` to use full batch.
-    scale_strategy : str | None
-        ``None`` to fit a new scaler, ``"no_scale"`` to disable scaling.
-    width_size, depth, augment_dim : int
-        Neural network architecture parameters.
-    activation : Callable
-        Activation function for the MLP.
-    solver : diffrax.AbstractSolver
-        ODE solver used during training.
-    seed : int
-        Random seed for data generation and model initialisation.
+    Args:
+        training_initialconcentrations: Initial solute concentrations used for training simulations.
+        testing_initialconcentrations: Initial solute concentrations reserved for evaluation.
+        ntimesteps: Number of time points per simulated trajectory.
+        nucl_params: Nucleation parameters passed to ``simulateCrystallisation``.
+        growth_params: Growth parameters passed to ``simulateCrystallisation``.
+        noise: Whether to inject Gaussian noise into the synthetic trajectories.
+        noise_level: Standard deviation of injected noise if ``noise`` is True.
+        lr_strategy: Two-phase learning rates (phase 1, phase 2).
+        steps_strategy: Training steps for each phase.
+        length_strategy: Fractions of the trajectory to expose in each phase.
+        batch_size: Batch size or ``"all"`` for full-batch training.
+        scale_strategy: ``None`` to fit a scaler, ``"no_scale"`` to bypass scaling.
+        width_size: Width of each hidden layer in the MLP backbone.
+        depth: Number of hidden layers in the MLP backbone.
+        augment_dim: Dimensionality of the augmented state.
+        include_time: If True, appends time to the MLP inputs.
+        activation: Activation function for the MLP.
+        solver: Diffrax solver used during ODE integration.
+        seed: PRNG seed for data generation and model initialisation.
+        verbose: Whether to log intermediate losses during training.
+        print_every: Interval (in steps) for evaluating test loss.
+        splitplot: If True, create matplotlib trajectory plots.
+        plotly_plots: If True, create interactive Plotly plots.
+        saveplot: If True, save generated plots to disk.
+        lossplot: If True, create loss-curve plots.
+        extratitlestring: Extra text appended to plot titles.
+        save_idxs: Time indices to save when generating synthetic data.
+        output_constraints: Optional dict enforcing sign constraints per output index.
 
-    Returns
-    -------
-    tuple
-        ``(ts, ys_train, ys_test, model, scaler, metrics_list, train_losses, test_losses)``
+    Returns:
+        Tuple ``(ts, ys_train, ys_test, model, scaler, metrics_list, (aug_min, aug_max))`` where
+        ``ts`` is the time grid, ``ys_train``/``ys_test`` are simulated trajectories,
+        ``model`` is the trained AugmentedNeuralODE, ``scaler`` is the fitted ``MinMaxScaler``
+        or ``None`` if scaling was disabled, ``metrics_list`` contains per-experiment metrics,
+        and ``(aug_min, aug_max)`` are per-dimension bounds observed in the augmented space.
+        On training failure, elements may be ``None`` and metrics will encode the error state.
     """
     key = jr.PRNGKey(seed)
     data_key, model_key, loader_key, split_key = jr.split(key, 4)
@@ -659,24 +668,36 @@ def train_AugNODE_TL(
 ) -> tuple[Array, Array, Array, AugmentedNeuralODE, MinMaxScaler | None, list[dict]]:
     """Fine‑tune an existing Augmented NODE on new data.
 
-    Parameters
-    ----------
-    model : AugmentedNeuralODE
-        Pre‑trained model to start from.
-    idx_frozen : int | tuple[int, int] | str
-        Which layers of the MLP to freeze during optimisation.  ``"last"`` and
-        ``"first"`` are convenient shorthands.
-    freeze_mode : str, optional
-        Choose ``"weights"``, ``"biases"`` or ``"both"`` to control which
-        parameters of the selected layers remain fixed.
+    Args:
+        training_initialconcentrations: Initial solute concentrations for training simulations.
+        testing_initialconcentrations: Initial solute concentrations for evaluation.
+        model: Pre-trained AugmentedNeuralODE to be fine-tuned.
+        scaler: Pre-fitted ``MinMaxScaler`` or ``None`` if scaling was disabled.
+        idx_frozen: Layers to freeze (index, slice tuple, or ``"last"``, ``"first"``, ``"all"``, ``"none"``).
+        freeze_mode: Which parameters of the frozen layers to lock (``"weights"``, ``"biases"``, ``"both"``).
+        ntimesteps: Number of time points per simulated trajectory.
+        nucl_params: Nucleation parameters used for synthetic data.
+        growth_params: Growth parameters used for synthetic data.
+        noise: Whether to inject Gaussian noise into the simulations.
+        noise_level: Standard deviation of injected noise if ``noise`` is True.
+        lr_strategy: Two-phase learning rates (phase 1, phase 2).
+        steps_strategy: Training steps for each phase.
+        length_strategy: Fractions of the trajectory to expose in each phase.
+        batch_size: Batch size or ``"all"`` for full-batch training.
+        scale_strategy: ``None``/``"keep_scaler"`` to reuse ``scaler``, ``"refit_scaler"`` to fit anew.
+        seed: PRNG seed for data generation and optimisation.
+        verbose: Whether to log intermediate losses during training.
+        print_every: Interval (in steps) for evaluating test loss.
+        splitplot: If True, create matplotlib trajectory plots.
+        saveplot: If True, save generated plots to disk.
+        lossplot: If True, create loss-curve plots.
+        extratitlestring: Extra text appended to plot titles.
+        save_idxs: Time indices to save when generating synthetic data.
 
-    Other parameters are identical to :func:`train_AugNODE_fresh`.
-
-    Returns
-    -------
-    tuple
-        ``(ts, ys_train, ys_test, model, scaler, metrics_list)`` analogous to
-        :func:`train_AugNODE_fresh` but using the fine‑tuned ``model``.
+    Returns:
+        Tuple ``(ts, ys_train, ys_test, model, scaler, metrics_list, (aug_min, aug_max))`` analogous to
+        :func:`train_AugNODE_fresh` but using the fine-tuned ``model`` and carrying augmented-dimension bounds.
+        On training failure, elements may be ``None`` and metrics will encode the error state.
     """
     key = jr.PRNGKey(seed)
     data_key, model_key, loader_key, split_key, init_key = jr.split(key, 5)
@@ -1028,22 +1049,36 @@ def train_AugNODE_TL_penalise_deviation(
 ) -> tuple[Array, Array, Array, AugmentedNeuralODE, MinMaxScaler | None, list[dict]]:
     """Fine‑tune an Augmented NODE with a deviation penalty.
 
-    Parameters
-    ----------
-    model : AugmentedNeuralODE
-        Base model whose parameters act as the reference weights.
-    penalty_lambda : float
-        Scaling applied to the L2 penalty that discourages the new parameters
-        from deviating from their initial values.
-    penalty_strategy : int | tuple[int, int] | str
-        Selects which layers contribute to the penalty (e.g. ``"last"`` or
-        ``"all"``).
+    Args:
+        training_initialconcentrations: Initial solute concentrations for training simulations.
+        testing_initialconcentrations: Initial solute concentrations for evaluation.
+        model: Base AugmentedNeuralODE whose parameters define the reference weights.
+        scaler: Pre-fitted ``MinMaxScaler`` or ``None`` if scaling was disabled.
+        ntimesteps: Number of time points per simulated trajectory.
+        nucl_params: Nucleation parameters used for synthetic data.
+        growth_params: Growth parameters used for synthetic data.
+        noise: Whether to inject Gaussian noise into the simulations.
+        noise_level: Standard deviation of injected noise if ``noise`` is True.
+        lr_strategy: Two-phase learning rates (phase 1, phase 2).
+        steps_strategy: Training steps for each phase.
+        length_strategy: Fractions of the trajectory to expose in each phase.
+        batch_size: Batch size or ``"all"`` for full-batch training.
+        scale_strategy: ``None``/``"keep_scaler"`` to reuse ``scaler``, ``"refit_scaler"`` to fit anew.
+        seed: PRNG seed for data generation and optimisation.
+        verbose: Whether to log intermediate losses during training.
+        print_every: Interval (in steps) for evaluating test loss.
+        splitplot: If True, create matplotlib trajectory plots.
+        saveplot: If True, save generated plots to disk.
+        lossplot: If True, create loss-curve plots.
+        extratitlestring: Extra text appended to plot titles.
+        save_idxs: Time indices to save when generating synthetic data.
+        penalty_lambda: Scaling factor for the L2 penalty that discourages deviation from the base model.
+        penalty_strategy: Layers contributing to the penalty (index, slice tuple, or ``"last"``, ``"all"``, etc.).
 
-    Returns
-    -------
-    tuple
-        ``(ts, ys_train, ys_test, model, scaler, metrics_list)`` similar to
-        :func:`train_AugNODE_fresh` but including the penalty in the loss.
+    Returns:
+        Tuple ``(ts, ys_train, ys_test, model, scaler, metrics_list, (aug_min, aug_max))`` similar to
+        :func:`train_AugNODE_fresh` but with an additional deviation penalty in the loss.
+        On training failure, elements may be ``None`` and metrics will encode the error state.
     """
     import copy
 
@@ -1367,22 +1402,36 @@ def train_AugNODE_TL_append(
 ) -> tuple[Array, Array, Array, AugmentedNeuralODE, MinMaxScaler | None, list[dict]]:
     """Perform transfer learning by extending the network architecture.
 
-    Parameters
-    ----------
-    model : AugmentedNeuralODE
-        Base model providing the frozen core.
-    append_layers : int
-        How many new layers to prepend and append to the existing network.
-    append_width : int | None
-        Width of the new layers; defaults to the original model width if ``None``.
+    Args:
+        training_initialconcentrations: Initial solute concentrations for training simulations.
+        testing_initialconcentrations: Initial solute concentrations for evaluation.
+        model: Base AugmentedNeuralODE providing the frozen core.
+        scaler: Pre-fitted ``MinMaxScaler`` or ``None`` if scaling was disabled.
+        append_layers: Number of new layers to prepend and append around the frozen core.
+        append_width: Width of the appended layers; defaults to the original model width if ``None``.
+        ntimesteps: Number of time points per simulated trajectory.
+        nucl_params: Nucleation parameters used for synthetic data.
+        growth_params: Growth parameters used for synthetic data.
+        noise: Whether to inject Gaussian noise into the simulations.
+        noise_level: Standard deviation of injected noise if ``noise`` is True.
+        lr_strategy: Two-phase learning rates (phase 1, phase 2).
+        steps_strategy: Training steps for each phase.
+        length_strategy: Fractions of the trajectory to expose in each phase.
+        batch_size: Batch size or ``"all"`` for full-batch training.
+        scale_strategy: ``None``/``"keep_scaler"`` to reuse ``scaler``, ``"refit_scaler"`` to fit anew.
+        seed: PRNG seed for data generation and optimisation.
+        verbose: Whether to log intermediate losses during training.
+        print_every: Interval (in steps) for evaluating test loss.
+        splitplot: If True, create matplotlib trajectory plots.
+        saveplot: If True, save generated plots to disk.
+        lossplot: If True, create loss-curve plots.
+        extratitlestring: Extra text appended to plot titles.
+        save_idxs: Time indices to save when generating synthetic data.
 
-    Other parameters mirror :func:`train_AugNODE_fresh`.
-
-    Returns
-    -------
-    tuple
-        ``(ts, ys_train, ys_test, new_model, scaler, metrics_list)`` where
-        ``new_model`` is the augmented network containing the frozen core.
+    Returns:
+        Tuple ``(ts, ys_train, ys_test, new_model, scaler, metrics_list, (aug_min, aug_max))`` where
+        ``new_model`` is the augmented network containing the frozen core and appended layers.
+        On training failure, elements may be ``None`` and metrics will encode the error state.
     """
     key = jr.PRNGKey(seed)
     data_key, model_key, loader_key, split_key, init_key = jr.split(key, 5)
@@ -1839,4 +1888,3 @@ if __name__ == "__main__":
     print(f"Min bounds: {aug_min}")
     print(f"Max bounds: {aug_max}")
     print(f"Augmented dimension range: {aug_max - aug_min}")
-
