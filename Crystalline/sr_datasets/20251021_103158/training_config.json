@@ -1,0 +1,46 @@
+{
+  "C_TRAIN_SOURCE": [
+    15.5,
+    16.5,
+    19
+  ],
+  "C_TEST": [
+    14.3,
+    17.7,
+    20
+  ],
+  "lr_strategy": [
+    0.0002,
+    0.0004
+  ],
+  "steps_strategy": [
+    600,
+    600
+  ],
+  "length_strategy": [
+    0.33,
+    1
+  ],
+  "width_size": 32,
+  "depth": 4,
+  "activation": "swish",
+  "ntimesteps": 5,
+  "seed": 4700,
+  "save_idxs": [
+    0,
+    3
+  ],
+  "noise": true,
+  "noise_level": 0.0,
+  "batch_size": "all",
+  "augment_dim": 2,
+  "nucl_params": [
+    39.8,
+    0.675
+  ],
+  "growth_params": [
+    0.37,
+    3.3
+  ],
+  "num_tsave_points": 50
+}

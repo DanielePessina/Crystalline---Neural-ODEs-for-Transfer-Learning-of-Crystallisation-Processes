@@ -1,0 +1,9 @@
+{
+  "data_size": 2,
+  "augment_size": 2,
+  "width_size": 32,
+  "depth": 5,
+  "include_time": true,
+  "solver": "Tsit5",
+  "activation": "swish"
+}

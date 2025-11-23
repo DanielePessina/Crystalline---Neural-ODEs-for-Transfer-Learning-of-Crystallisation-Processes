@@ -1,0 +1,108 @@
+[project]
+name = "Crystalline"
+version = "0.5.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "arviz>=0.22.0",
+    "black>=25.1.0",
+    "blackjax>=1.2.5",
+    "cmcrameri>=1.9",
+    "dash>=3.2.0",
+    "dash-bootstrap-components>=2.0.3",
+    "dash-extensions>=2.0.4",
+    "diffrax>=0.7.0",
+    "diskcache>=5.6.3",
+    "distrax>=0.1.5",
+    "equinox>=0.11.12",
+    "flowjax>=17.1.1",
+    "gymnax>=0.0.9",
+    "ipykernel>=6.29.5",
+    "ipympl>=0.9.7",
+    "ipywidgets>=8.1.5",
+    "jax>=0.5.3",
+    "marimo[recommended]>=0.13.1",
+    "matplotlib>=3.10.1",
+    "notebook>=7.4.0",
+    "numpy>=2.2.4",
+    "numpyro>=0.18.0",
+    "openpyxl>=3.1.5",
+    "optax>=0.2.4",
+    "optimistix>=0.0.10",
+    "optuna>=4.2.1",
+    "pandas>=2.2.3",
+    "pip>=25.0.1",
+    "plotly>=6.1.1",
+    "polars>=1.26.0",
+    "pre-commit>=4.2.0",
+    "pyfonts>=1.1.1",
+    "pymc>=5.26.1",
+    "pypalettes>=0.1.5",
+    "pysr>=1.5.9",
+    "pytest>=8.3.5",
+    "rich[jupyter]>=14.1.0",
+    "rlax>=0.1.7",
+    "scienceplots>=2.1.1",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.15.2",
+    "seaborn>=0.13.2",
+    "shap>=0.48.0",
+    "statsmodels>=0.14.5",
+    "sympy>=1.14.0",
+    "tinygp>=0.3.0",
+    "tqdm>=4.67.1",
+    "xlsxwriter>=3.2.2",
+]
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+extend-select = [
+    "F",        # Pyflakes rules
+    "W",        # PyCodeStyle warnings
+    "E",        # PyCodeStyle errors
+    "I",        # Sort imports properly
+    "UP",       # Warn if certain things can changed due to newer Python versions
+    "C4",       # Catch incorrect use of comprehensions, dict, list, etc
+    "FA",       # Enforce from __future__ import annotations
+    "ISC",      # Good use of string concatenation
+    "ICN",      # Use common import conventions
+    "RET",      # Good return practices
+    "SIM",      # Common simplification rules
+    "TID",      # Some good import practices
+    "TC",       # Enforce importing certain types in a TYPE_CHECKING block
+    "PTH",      # Use pathlib instead of os.path
+    "TD",       # Be diligent with TODO comments
+    "NPY",      # Some numpy-specific things
+]
+ignore = [
+"E501", # Line too long
+"SIM108", # Simplification rule
+"E741", # Ambiguous variable name
+]
+
+[tool.uv.sources]
+torchvision = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
+
+[tool.setuptools]
+packages = ["Crystalline"]

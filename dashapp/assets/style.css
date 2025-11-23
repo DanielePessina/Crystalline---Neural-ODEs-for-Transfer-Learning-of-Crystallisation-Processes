@@ -1,0 +1,181 @@
+/* Custom CSS for Beautiful Crystalline Dash App */
+
+/* 1) Page grid: two columns on wide screens; stack on small */
+#grid {
+  display: grid;
+  gap: clamp(12px, 2vw, 20px);
+  grid-template-columns: 1fr; /* default stack */
+  padding: clamp(8px, 2vw, 20px);
+}
+
+/* Breakpoint for 2 columns - left panel and wider center panel */
+@media (min-width: 1100px) {
+  #grid {
+    grid-template-columns: 2fr 8fr; /* left settings, much wider center panel */
+    align-items: start;
+  }
+}
+
+/* 2) Pane padding (only if needed) */
+#left-pane, #center-pane {
+  min-width: 0; /* allow children to shrink */
+}
+
+/* 3) Terminal styling */
+.terminal {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: clamp(12px, 1.4vw, 14px);
+  line-height: 1.4;
+  background: #0f172a0d; /* subtle slate tint */
+  border-radius: 6px;
+  padding: 10px 12px;
+  height: clamp(180px, 25vh, 260px);
+  overflow: auto;
+  border: 1px solid #00000010;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 4) Plots grid inside the card */
+.plots-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(8px, 1.2vw, 12px);
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Single column for plots to ensure full visibility */
+.plots-grid {
+  grid-template-columns: 1fr;
+}
+
+/* 5) Make Graphs full-width within cards and ensure proper sizing */
+.js-plotly-plot, .dash-graph {
+  width: 100% !important;
+  max-width: 100%;
+  overflow: visible;
+  min-height: 600px;
+}
+
+/* Ensure plot containers don't overflow and maintain aspect ratio */
+.dash-graph > div {
+  width: 100% !important;
+  max-width: 100%;
+  height: auto !important;
+}
+
+/* Ensure Plotly containers are responsive */
+.plotly-graph-div {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* 6) DBC card tweaks */
+.card {
+  border: 1px solid #00000012;
+  border-radius: 10px;
+}
+
+.card-header {
+  font-weight: 600;
+  font-size: clamp(14px, 1.6vw, 16px);
+}
+
+.card-body {
+  padding: clamp(12px, 2vw, 18px);
+}
+
+/* 7) Input spacing */
+.form-label {
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+/* 8) DataTable polish */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td,
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  padding: 8px 10px !important;
+  border-bottom: 1px solid #00000010;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+
+/* 9) Global improvements */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+/* 10) Form element consistency */
+.form-control, .form-select {
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* 11) Button improvements */
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* 12) Loading state */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+/* 13) Section dividers */
+.section-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #dee2e6, transparent);
+  margin: 1.5rem 0;
+}
+
+/* 14) Responsive text sizing */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+}
+
+h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); }
+h2 { font-size: clamp(1.5rem, 3.5vw, 2rem); }
+h3 { font-size: clamp(1.25rem, 3vw, 1.75rem); }
+h4 { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
+
+/* 15) Slider improvements */
+.rc-slider {
+  margin: 10px 0;
+}
+
+.rc-slider-track {
+  background-color: #007bff;
+}
+
+.rc-slider-handle {
+  border-color: #007bff;
+}
+
+.rc-slider-handle:hover {
+  border-color: #0056b3;
+}
